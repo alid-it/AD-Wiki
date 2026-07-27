@@ -1,0 +1,20 @@
+# Beispielausschnitt für den bestehenden Alertmanager der Monitoring-VM.
+# Route und Receiver in die vorhandene Konfiguration übernehmen; bestehende
+# globale Einstellungen und andere Empfänger bleiben unverändert.
+route:
+  routes:
+    - receiver: ad-wiki-operations
+      matchers:
+        - alertname=~"ADWiki.*"
+      group_by:
+        - alertname
+        - instance
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+
+receivers:
+  - name: ad-wiki-operations
+    webhook_configs:
+      - url_file: /etc/alertmanager/secrets/ad-wiki-webhook-url
+        send_resolved: true

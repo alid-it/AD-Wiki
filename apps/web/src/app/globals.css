@@ -1,0 +1,532 @@
+@import 'tailwindcss';
+
+/* Dark-Mode wird über die Klasse `dark` am <html>-Element gesteuert (manueller
+   Toggle bzw. vom No-FOUC-Script aufgelöste System-Preference). Dadurch wirken
+   `dark:`-Utilities zusammen mit dem Toggle. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* ── Brand (Orange) ── Navbar, Logo, Branding */
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-300: #fdba74;
+  --color-brand-400: #fb923c;
+  --color-brand-500: #f97316;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+  --color-brand-800: #9a3412;
+  --color-brand-900: #7c2d12;
+
+  /* ── Accent (Blau) ── Buttons, Links, aktive Elemente */
+  --color-accent-50: #eff6ff;
+  --color-accent-100: #dbeafe;
+  --color-accent-200: #bfdbfe;
+  --color-accent-300: #93c5fd;
+  --color-accent-400: #60a5fa;
+  --color-accent-500: #3b82f6;
+  --color-accent-600: #2563eb;
+  --color-accent-700: #1d4ed8;
+  --color-accent-800: #1e40af;
+  --color-accent-900: #1e3a8a;
+
+  /* ── Semantische Farben (aus MASTER.md) ── */
+  --color-background: #f8fafc;
+  --color-foreground: #1e293b;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-muted: #64748b;
+
+  /* ── Status-Farben (Dashboard: green/amber/red) ── */
+  --color-success-50: #f0fdf4;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-danger-50: #fef2f2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+
+  /* ── Radien (Soft UI) ── */
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* ── Weiche Schatten (einzeln, kein Neumorphism) ── */
+  --shadow-soft-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-soft-md: 0 4px 6px rgba(15, 23, 42, 0.08);
+  --shadow-soft-lg: 0 10px 20px rgba(15, 23, 42, 0.1);
+
+  /* ── Schrift ── */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Motion: gestaffeltes Einblenden ── */
+  --animate-fade-in-up: fade-in-up 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* ── Motion: Toast gleitet von rechts ein ── */
+  --animate-toast-in: toast-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE
+   Es werden gezielt die semantischen Tokens (background/surface/
+   foreground/border/muted), die hellen Tint-Flächen (*-50/100) und die
+   nur als Text genutzten helleren Shades (*-700) überschrieben. Da alle
+   Komponenten diese Tokens nutzen, wird nahezu die gesamte App automatisch
+   dark-mode-fähig. Kräftige Akzente (*-600) bleiben als Buttons/Chips
+   erhalten (dunkle Tints liefern genug Kontrast zum Text).
+   ══════════════════════════════════════════════════════════════ */
+.dark {
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-foreground: #e2e8f0;
+  --color-border: #334155;
+  --color-muted: #94a3b8;
+
+  /* Brand-Tints (Avatare/Chips: bg-brand-50/100 text-brand-600/700) */
+  --color-brand-50: #2a1608;
+  --color-brand-100: #3a1e0c;
+  --color-brand-700: #fdba74;
+
+  /* Accent-Tints (Links/Chips) */
+  --color-accent-50: #172033;
+  --color-accent-100: #1e2b45;
+  --color-accent-700: #93c5fd;
+
+  /* Status-Tints (bg-*-50 text-*-600) */
+  --color-success-50: #0e2a1c;
+  --color-warning-50: #2a220e;
+  --color-danger-50: #2b1416;
+
+  /* Kräftigere Schatten auf dunklem Grund */
+  --shadow-soft-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-soft-md: 0 4px 8px rgba(0, 0, 0, 0.45);
+  --shadow-soft-lg: 0 12px 24px rgba(0, 0, 0, 0.55);
+}
+
+/* System-Preference als Basis, solange der Nutzer nicht explizit „light" wählt.
+   (Ohne JavaScript; das No-FOUC-Script setzt sonst die passende Klasse.) */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not(.dark) {
+    --color-background: #0f172a;
+    --color-surface: #1e293b;
+    --color-foreground: #e2e8f0;
+    --color-border: #334155;
+    --color-muted: #94a3b8;
+    --color-brand-50: #2a1608;
+    --color-brand-100: #3a1e0c;
+    --color-brand-700: #fdba74;
+    --color-accent-50: #172033;
+    --color-accent-100: #1e2b45;
+    --color-accent-700: #93c5fd;
+    --color-success-50: #0e2a1c;
+    --color-warning-50: #2a220e;
+    --color-danger-50: #2b1416;
+    --shadow-soft-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-soft-md: 0 4px 8px rgba(0, 0, 0, 0.45);
+    --shadow-soft-lg: 0 12px 24px rgba(0, 0, 0, 0.55);
+  }
+}
+
+/* Sanfter 150ms-Übergang beim Theme-Wechsel. Erst nach dem Mount aktiv
+   (Klasse `theme-transitions`), damit die Farben beim Laden nicht „aufblitzen". */
+html.theme-transitions,
+html.theme-transitions * {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    fill 150ms ease;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Bewegung respektieren: bei reduzierter Bewegung nur weiches Einblenden. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-toast-in {
+    animation-name: fade-in-only;
+  }
+}
+
+@keyframes fade-in-only {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Artikel-/Vorschau-Inhalt ──
+   Einheitliches Styling für gerenderten Markdown (react-markdown) und
+   sanitisiertes HTML (Tiptap). Beide erzeugen dieselben HTML-Tags, daher
+   genügt eine Deklaration über Nachfahren-Selektoren. */
+.prose-content {
+  color: var(--color-foreground);
+  font-size: 15px;
+  line-height: 1.75;
+}
+.prose-content > :first-child {
+  margin-top: 0;
+}
+.prose-content h1,
+.prose-content h2,
+.prose-content h3,
+.prose-content h4 {
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-foreground);
+  margin-top: 1.75em;
+  margin-bottom: 0.6em;
+  scroll-margin-top: 5rem;
+}
+.prose-content h1 {
+  font-size: 1.6em;
+}
+.prose-content h2 {
+  font-size: 1.35em;
+}
+.prose-content h3 {
+  font-size: 1.15em;
+}
+.prose-content p {
+  margin: 0.9em 0;
+}
+.prose-content a {
+  color: var(--color-accent-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-content a:hover {
+  color: var(--color-accent-700);
+}
+.prose-content ul,
+.prose-content ol {
+  margin: 0.9em 0;
+  padding-left: 1.5em;
+}
+.prose-content ul {
+  list-style: disc;
+}
+.prose-content ol {
+  list-style: decimal;
+}
+.prose-content li {
+  margin: 0.35em 0;
+}
+.prose-content ul.contains-task-list,
+.prose-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.25em;
+}
+.prose-content li.task-list-item,
+.prose-content li[data-type="taskItem"],
+.prose-content ul[data-type="taskList"] > li {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+.prose-content li.task-list-item > input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin-top: 0.35em;
+}
+.prose-content li[data-type="taskItem"] > label,
+.prose-content ul[data-type="taskList"] > li > label {
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 1.75rem;
+  align-items: center;
+}
+.prose-content li[data-type="taskItem"] > div,
+.prose-content ul[data-type="taskList"] > li > div {
+  min-width: 0;
+  flex: 1;
+}
+.prose-content li[data-type="taskItem"] > div > p:first-child,
+.prose-content ul[data-type="taskList"] > li > div > p:first-child {
+  margin-top: 0;
+}
+.prose-content li[data-type="taskItem"] > div > p:last-child,
+.prose-content ul[data-type="taskList"] > li > div > p:last-child {
+  margin-bottom: 0;
+}
+.prose-content input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0 0.45rem 0 0;
+  accent-color: var(--color-accent-600);
+}
+.prose-content input[type="checkbox"]:not(:disabled) {
+  cursor: pointer;
+}
+.prose-content input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--color-accent-600);
+  outline-offset: 2px;
+}
+.prose-content li.task-list-item:has(input[type="checkbox"]:checked),
+.prose-content li[data-type="taskItem"][data-checked="true"] > div,
+.prose-content ul[data-type="taskList"] > li[data-checked="true"] > div {
+  color: var(--color-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.prose-content blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 1em;
+  margin: 1.1em 0;
+  color: var(--color-muted);
+}
+.prose-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+}
+.prose-content pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: var(--radius-lg);
+  padding: 1em 1.15em;
+  overflow-x: auto;
+  margin: 1.1em 0;
+}
+.prose-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: 0.875em;
+}
+.prose-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  margin: 1.1em 0;
+}
+.prose-content hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 1.75em 0;
+}
+.prose-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.1em 0;
+  display: block;
+  overflow-x: auto;
+}
+.prose-content th,
+.prose-content td {
+  border: 1px solid var(--color-border);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+.prose-content th {
+  background: var(--color-background);
+  font-weight: 600;
+}
+
+/* Im Dark-Mode Code-Blöcke etwas dunkler als die Seite + Rahmen, damit sie
+   sich vom (ohnehin dunklen) Hintergrund abheben. */
+.dark .prose-content pre {
+  background: #0b1120;
+  border: 1px solid var(--color-border);
+}
+.dark .prose-content code {
+  background: #0b1120;
+}
+
+.label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-foreground);
+}
+
+.section-title {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+
+/* Kompakte, wiederverwendbare Icon-Aktion in der Knowledge-Graph-Ansicht. */
+.graph-icon-button {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: color 180ms ease, background-color 180ms ease;
+}
+.graph-icon-button:hover {
+  color: var(--color-foreground);
+  background: var(--color-background);
+}
+.graph-icon-button:focus-visible {
+  outline: 2px solid var(--color-accent-600);
+  outline-offset: 2px;
+}
+
+.note-icon-button {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color 180ms ease, background-color 180ms ease;
+}
+.note-icon-button:hover { background: var(--color-background); }
+.note-icon-button:focus-visible { outline: 2px solid var(--color-accent-600); outline-offset: 2px; }
+
+.knowledge-choice {
+  display: flex;
+  min-height: 10rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+.knowledge-choice:hover { border-color: var(--color-accent-300); background: var(--color-background); }
+.knowledge-choice:focus-visible { outline: 2px solid var(--color-accent-600); outline-offset: 2px; }
+
+/* Öffentliche Artikel sind bewusst unabhängig vom eingeloggten Theme hell. */
+.public-article .prose-content,
+.public-article .prose-content h1,
+.public-article .prose-content h2,
+.public-article .prose-content h3,
+.public-article .prose-content h4 {
+  color: #0f172a;
+}
+.public-article .prose-content blockquote {
+  border-color: #cbd5e1;
+  color: #475569;
+}
+.public-article .prose-content code,
+.dark .public-article .prose-content code {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.public-article .prose-content th {
+  background: #f8fafc;
+}
+.public-article .prose-content th,
+.public-article .prose-content td,
+.public-article .prose-content hr {
+  border-color: #e2e8f0;
+}
+
+/* Artikel-Leseansicht bleibt ruhig, Navigation darf animieren.
+   prefers-reduced-motion global respektieren. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Druckansicht der Wiki-Detailseite: nur Titel und eigentlicher Artikelinhalt. */
+@media print {
+  @page {
+    margin: 18mm;
+  }
+
+  .app-navbar,
+  .wiki-sidebar,
+  .article-sidebar,
+  .article-breadcrumbs,
+  .article-toc,
+  .no-print {
+    display: none !important;
+  }
+
+  html,
+  body,
+  .wiki-shell,
+  .wiki-content-scroll {
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  .wiki-shell,
+  .article-page-shell {
+    display: block !important;
+  }
+
+  .article-page-shell {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .article-main {
+    max-width: none !important;
+  }
+
+  .article-header {
+    margin-bottom: 1.25rem !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  .article-header h1,
+  .prose-content,
+  .prose-content h1,
+  .prose-content h2,
+  .prose-content h3,
+  .prose-content h4 {
+    color: #0f172a !important;
+  }
+
+  .prose-content h1,
+  .prose-content h2,
+  .prose-content h3,
+  .prose-content h4 {
+    break-after: avoid-page;
+  }
+
+  .prose-content pre,
+  .prose-content blockquote,
+  .prose-content table,
+  .prose-content img {
+    break-inside: avoid-page;
+  }
+}

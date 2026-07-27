@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Secret-Historie
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository vollständig auschecken
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Git-Historie mit Gitleaks prüfen
+        run: >-
+          docker run --rm
+          --volume "${PWD}:/repo:ro"
+          ghcr.io/gitleaks/gitleaks:v8.30.1
+          git --redact --verbose /repo
+
+  quality:
+    name: TypeScript, Tests und Migrationen
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: adwiki_ci
+          POSTGRES_PASSWORD: adwiki_ci
+          POSTGRES_DB: adwiki_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U adwiki_ci -d adwiki_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://adwiki_ci:adwiki_ci@127.0.0.1:5432/adwiki_ci
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:4000/api/v1
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Node.js 24 einrichten
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Prisma-Schema validieren
+        run: npx prisma validate --config apps/api/prisma.config.ts
+
+      - name: Prisma Client generieren
+        run: npx prisma generate --config apps/api/prisma.config.ts
+
+      - name: Migrationen auf leerer Datenbank anwenden
+        run: npx prisma migrate deploy --config apps/api/prisma.config.ts
+
+      - name: Monorepo bauen
+        run: npm run build
+
+      - name: Automatisierte Tests ausführen
+        run: npm run test:mcp
+
+  containers:
+    name: Produktionscontainer
+    runs-on: ubuntu-latest
+    needs:
+      - secrets
+      - quality
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Compose-Konfiguration validieren
+        run: >-
+          docker compose
+          --env-file .env.production.example
+          --file docker-compose.prod.yml
+          config --quiet
+
+      - name: Quellcodefreies Deployment validieren
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if grep -Eq '^[[:space:]]+build:' deploy/docker-compose.yml; then
+            echo "Die Release-Compose-Datei darf keine build-Einträge enthalten."
+            exit 1
+          fi
+          docker compose \
+            --env-file deploy/.env.production.example \
+            --file deploy/docker-compose.yml \
+            config --quiet
+
+      - name: Produktionsimages bauen
+        run: >-
+          docker compose
+          --env-file .env.production.example
+          --file docker-compose.prod.yml
+          build

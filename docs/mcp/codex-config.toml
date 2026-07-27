@@ -1,0 +1,3 @@
+[mcp_servers.ad-wiki]
+url = "https://wiki.example.de/mcp"
+oauth_resource = "https://wiki.example.de/mcp"

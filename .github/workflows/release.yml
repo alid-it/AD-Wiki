@@ -1,0 +1,149 @@
+name: Container-Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    name: CI wiederverwenden
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  publish:
+    name: ${{ matrix.image }} veröffentlichen
+    runs-on: ubuntu-latest
+    needs:
+      - quality
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            dockerfile: docker/api.Dockerfile
+            target: runtime
+          - image: database-init
+            dockerfile: docker/api.Dockerfile
+            target: bootstrap
+          - image: backup
+            dockerfile: docker/backup.Dockerfile
+            target: runtime
+          - image: web
+            dockerfile: docker/web.Dockerfile
+            target: runtime
+          - image: nginx
+            dockerfile: docker/nginx.Dockerfile
+            target: runtime
+          - image: tls-init
+            dockerfile: docker/nginx.Dockerfile
+            target: tls-init
+    env:
+      REGISTRY: ghcr.io
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Docker Buildx einrichten
+        uses: docker/setup-buildx-action@v4
+
+      - name: Bei GHCR anmelden
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image-Metadaten erzeugen
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/ad-wiki-${{ matrix.image }}
+          tags: |
+            type=ref,event=tag
+            type=sha,format=long
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+          labels: |
+            org.opencontainers.image.title=AD-Wiki ${{ matrix.image }}
+            org.opencontainers.image.description=AD-Wiki Open-Source Knowledge Base
+
+      - name: Image bauen und veröffentlichen
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            ${{ matrix.image == 'web' && 'NEXT_PUBLIC_API_URL=/api/v1' || '' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          provenance: mode=max
+          sbom: true
+
+  github-release:
+    name: GitHub-Release erstellen
+    runs-on: ubuntu-latest
+    needs:
+      - publish
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Deployment-Dateien vorbereiten
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          release_version="${GITHUB_REF_NAME#v}"
+          mkdir -p release-assets
+          cp deploy/docker-compose.yml release-assets/docker-compose.yml
+          cp deploy/.env.production.example release-assets/env.production.example
+          sed -i \
+            -e "s/__AD_WIKI_IMAGE_TAG__/${GITHUB_REF_NAME}/g" \
+            -e "s/__AD_WIKI_VERSION__/${release_version}/g" \
+            release-assets/env.production.example
+          (
+            cd release-assets
+            sha256sum docker-compose.yml env.production.example > SHA256SUMS
+          )
+
+      - name: GitHub-Release veröffentlichen
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          assets=(
+            release-assets/docker-compose.yml
+            release-assets/env.production.example
+            release-assets/SHA256SUMS
+          )
+
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" "${assets[@]}" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" "${assets[@]}" \
+              --verify-tag \
+              --generate-notes \
+              --title "AD-Wiki ${GITHUB_REF_NAME}"
+          fi

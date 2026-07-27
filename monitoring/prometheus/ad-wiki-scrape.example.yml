@@ -1,0 +1,46 @@
+# Diesen Block in die bestehende prometheus.yml der Monitoring-VM übernehmen.
+# Hostname, Secret-Pfad und Adresse des vorhandenen Blackbox Exporters anpassen.
+scrape_configs:
+  - job_name: ad-wiki-api
+    scheme: https
+    metrics_path: /api/v1/health/metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/secrets/ad-wiki-monitoring-token
+    static_configs:
+      - targets:
+          - wiki.example.com
+        labels:
+          environment: production
+          service: api
+
+  # Optional, wenn auf der Monitoring-VM ein Blackbox Exporter vorhanden ist.
+  - job_name: ad-wiki-blackbox
+    metrics_path: /probe
+    params:
+      module:
+        - http_2xx
+    static_configs:
+      - targets:
+          - https://wiki.example.com/api/v1/health/live
+        labels:
+          environment: production
+          service: api
+      - targets:
+          - https://wiki.example.com/login
+        labels:
+          environment: production
+          service: web
+    relabel_configs:
+      - source_labels:
+          - __address__
+        target_label: __param_target
+      - source_labels:
+          - __param_target
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+
+# Diesen Eintrag mit den vorhandenen rule_files zusammenführen.
+rule_files:
+  - /etc/prometheus/rules/ad-wiki-alerts.yml

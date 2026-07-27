@@ -1,0 +1,46 @@
+node_modules/
+dist/
+.next/
+.turbo/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+!.env.*.example
+!**/.env.example
+!**/.env.*.example
+*.log
+coverage/
+uploads/
+deploy/secrets/
+deploy/certs/
+docker/nginx/certs/
+/backups/
+tmp/
+.cache/
+docker-compose.override.yml
+*.pem
+*.key
+*.pfx
+*.p12
+*.jks
+!docker/nginx/placeholders/not-configured.key
+.DS_Store
+Thumbs.db
+# Claude/Agents Skills (keep commands only)
+.claude/skills/
+.agents/
+# ADPKI (separate project)
+design-system/adpki-wiki/
+# pnpm (we use npm)
+pnpm-lock.yaml
+pnpm-workspace.yaml
+# Build artifacts
+*.tsbuildinfo
+__pycache__/
+*.pyc
+Phasen.md
+Bugs.md
+mcp.md
+info.md
+Dev.md

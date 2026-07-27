@@ -1,0 +1,1378 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ══════════════════════════════════════════════
+// AUTH-SYSTEM: users, roles, acls, user_permissions
+// ══════════════════════════════════════════════
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  username         String   @unique
+  displayName      String   @map("display_name")
+  password         String
+  avatarUrl        String?  @map("avatar_url")
+  isActive         Boolean  @default(true) @map("is_active")
+  isProtected      Boolean  @default(false) @map("is_protected")
+  hasLocalPassword Boolean  @default(true) @map("has_local_password")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  role   Role   @relation(fields: [roleId], references: [id])
+  roleId String @map("role_id")
+
+  permissions                   UserPermission[]
+  groupMemberships              GroupMembership[]
+  externalIdentities            ExternalIdentity[]
+  oidcAuthorizationRequests     OidcAuthorizationRequest[]
+  oidcLoginCodes                OidcLoginCode[]
+  pages                         Page[]
+  deletedPages                  Page[]                      @relation("DeletedPages")
+  pageVersions                  PageVersion[]
+  pageDrafts                    PageDraft[]
+  media                         Media[]
+  sessions                      Session[]
+  passwordResetTokens           PasswordResetToken[]
+  auditLogs                     AuditLog[]
+  bookmarks                     Bookmark[]
+  notes                         Note[]                      @relation("NoteOwner")
+  noteShares                    NoteShare[]                 @relation("NoteShareRecipient")
+  createdStandards              Standard[]                  @relation("StandardCreator")
+  responsibleStandards          Standard[]                  @relation("StandardResponsible")
+  standardVersions              StandardVersion[]
+  requestedStandardExceptions   StandardException[]         @relation("StandardExceptionRequester")
+  responsibleStandardExceptions StandardException[]         @relation("StandardExceptionResponsible")
+  decidedStandardExceptions     StandardException[]         @relation("StandardExceptionDecider")
+  mcpAccessTokens               McpAccessToken[]
+  apiKeys                       ApiKey[]
+  mcpOAuthAuthorizationCodes    McpOAuthAuthorizationCode[]
+  mcpOAuthRefreshTokens         McpOAuthRefreshToken[]
+  requestedKnowledgeChanges     KnowledgeChangeRequest[]    @relation("KnowledgeChangeRequester")
+  reviewedKnowledgeChanges      KnowledgeChangeRequest[]    @relation("KnowledgeChangeReviewer")
+  integrationConnections        IntegrationConnection[]
+  integrationOAuthStates        IntegrationOAuthState[]
+  createdBackupDestinations     BackupDestination[]         @relation("BackupDestinationCreator")
+  createdBackupPlans            BackupPlan[]                @relation("BackupPlanCreator")
+  requestedBackupJobs           BackupJob[]                 @relation("BackupJobRequester")
+  resourceAclEntries            ResourceAclEntry[]          @relation("ResourceAclUser")
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  users                    User[]
+  acls                     Acl[]
+  identityProviderDefaults IdentityProvider[]            @relation("IdentityProviderDefaultRole")
+  identityProviderMappings IdentityProviderRoleMapping[]
+  externalRoleGrants       ExternalRoleGrant[]
+
+  @@map("roles")
+}
+
+enum GroupMembershipRole {
+  MEMBER
+  MANAGER
+}
+
+enum IdentityProviderType {
+  GENERIC_OIDC
+  MICROSOFT_ENTRA
+  KEYCLOAK
+}
+
+enum IdentityProviderSyncMode {
+  ADD_ONLY
+  MANAGED
+}
+
+enum EntraGraphMembershipMode {
+  DIRECT
+  TRANSITIVE
+}
+
+enum IdentityProviderClientAuthMethod {
+  NONE
+  CLIENT_SECRET_POST
+  CLIENT_SECRET_BASIC
+}
+
+enum IdentityProviderRoleMappingSource {
+  GROUP
+  ROLE
+}
+
+enum OidcAuthorizationIntent {
+  LOGIN
+  LINK
+  UNLINK
+}
+
+model Group {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  memberships              GroupMembership[]
+  responsibleSpaces        KnowledgeSpace[]
+  resourceAclEntries       ResourceAclEntry[]
+  identityProviderMappings IdentityProviderGroupMapping[]
+
+  @@map("groups")
+}
+
+model GroupMembership {
+  id            String              @id @default(uuid())
+  role          GroupMembershipRole @default(MEMBER)
+  hasLocalGrant Boolean             @default(true) @map("has_local_grant")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  group          Group                          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId        String                         @map("group_id")
+  user           User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String                         @map("user_id")
+  externalGrants ExternalGroupMembershipGrant[]
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@index([groupId, role])
+  @@map("group_memberships")
+}
+
+model IdentityProvider {
+  id                    String                           @id @default(uuid())
+  name                  String                           @unique
+  slug                  String                           @unique
+  type                  IdentityProviderType             @default(GENERIC_OIDC)
+  issuer                String
+  discoveryUrl          String?                          @map("discovery_url")
+  clientId              String                           @map("client_id")
+  clientAuthMethod      IdentityProviderClientAuthMethod @default(CLIENT_SECRET_POST) @map("client_auth_method")
+  encryptedClientSecret String?                          @map("encrypted_client_secret")
+  scopes                String[]                         @default(["openid", "profile", "email"])
+  claimMapping          Json                             @default("{}") @map("claim_mapping")
+  isActive              Boolean                          @default(false) @map("is_active")
+  displayOrder          Int                              @default(0) @map("display_order")
+  allowJitProvisioning  Boolean                          @default(false) @map("allow_jit_provisioning")
+  groupSyncMode         IdentityProviderSyncMode         @default(ADD_ONLY) @map("group_sync_mode")
+  groupClaim            String?                          @map("group_claim")
+  roleClaim             String?                          @map("role_claim")
+  allowAdminRoleMapping Boolean                          @default(false) @map("allow_admin_role_mapping")
+  maxSessionAgeMinutes  Int                              @default(480) @map("max_session_age_minutes")
+  entraGraphFallbackEnabled Boolean                      @default(false) @map("entra_graph_fallback_enabled")
+  entraGraphMembershipMode  EntraGraphMembershipMode     @default(TRANSITIVE) @map("entra_graph_membership_mode")
+  entraGraphCacheTtlMinutes Int                          @default(15) @map("entra_graph_cache_ttl_minutes")
+  createdAt             DateTime                         @default(now()) @map("created_at")
+  updatedAt             DateTime                         @updatedAt @map("updated_at")
+
+  defaultRole   Role?   @relation("IdentityProviderDefaultRole", fields: [defaultRoleId], references: [id], onDelete: Restrict)
+  defaultRoleId String? @map("default_role_id")
+
+  externalIdentities    ExternalIdentity[]
+  groupMappings         IdentityProviderGroupMapping[]
+  roleMappings          IdentityProviderRoleMapping[]
+  authorizationRequests OidcAuthorizationRequest[]
+  loginCodes            OidcLoginCode[]
+
+  @@unique([issuer, clientId])
+  @@index([isActive, displayOrder])
+  @@map("identity_providers")
+}
+
+model ExternalIdentity {
+  id                String    @id @default(uuid())
+  issuer            String
+  subject           String
+  email             String?
+  username          String?
+  displayName       String?   @map("display_name")
+  lastLoginAt       DateTime? @map("last_login_at")
+  lastGroupSyncAt   DateTime? @map("last_group_sync_at")
+  lastSyncErrorCode String?   @map("last_sync_error_code")
+  lastGroupClaims   String[]  @default([]) @map("last_group_claims")
+  lastRoleClaims    String[]  @default([]) @map("last_role_claims")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  provider   IdentityProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId String           @map("provider_id")
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String           @map("user_id")
+
+  groupMembershipGrants ExternalGroupMembershipGrant[]
+  externalRoleGrant     ExternalRoleGrant?
+  sessions              Session[]
+  loginCodes            OidcLoginCode[]
+  unlinkRequests        OidcAuthorizationRequest[]     @relation("OidcUnlinkTarget")
+
+  @@unique([providerId, issuer, subject])
+  @@unique([providerId, userId])
+  @@index([userId])
+  @@map("external_identities")
+}
+
+model IdentityProviderGroupMapping {
+  id                String   @id @default(uuid())
+  externalGroupId   String   @map("external_group_id")
+  externalGroupPath String?  @map("external_group_path")
+  externalGroupName String?  @map("external_group_name")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  provider   IdentityProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId String           @map("provider_id")
+  group      Group            @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  groupId    String           @map("group_id")
+
+  membershipGrants ExternalGroupMembershipGrant[]
+
+  @@unique([providerId, externalGroupId])
+  @@index([groupId])
+  @@map("identity_provider_group_mappings")
+}
+
+model IdentityProviderRoleMapping {
+  id            String                            @id @default(uuid())
+  source        IdentityProviderRoleMappingSource
+  externalValue String                            @map("external_value")
+  priority      Int
+  createdAt     DateTime                          @default(now()) @map("created_at")
+  updatedAt     DateTime                          @updatedAt @map("updated_at")
+
+  provider   IdentityProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId String           @map("provider_id")
+  role       Role             @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  roleId     String           @map("role_id")
+
+  externalGrants ExternalRoleGrant[]
+
+  @@unique([providerId, source, externalValue])
+  @@unique([providerId, priority])
+  @@index([roleId])
+  @@map("identity_provider_role_mappings")
+}
+
+model ExternalGroupMembershipGrant {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  membership         GroupMembership              @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  membershipId       String                       @map("membership_id")
+  externalIdentity   ExternalIdentity             @relation(fields: [externalIdentityId], references: [id], onDelete: Cascade)
+  externalIdentityId String                       @map("external_identity_id")
+  groupMapping       IdentityProviderGroupMapping @relation(fields: [groupMappingId], references: [id], onDelete: Cascade)
+  groupMappingId     String                       @map("group_mapping_id")
+
+  @@unique([externalIdentityId, groupMappingId])
+  @@index([membershipId])
+  @@index([groupMappingId])
+  @@map("external_group_membership_grants")
+}
+
+model ExternalRoleGrant {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  externalIdentity   ExternalIdentity            @relation(fields: [externalIdentityId], references: [id], onDelete: Cascade)
+  externalIdentityId String                      @unique @map("external_identity_id")
+  roleMapping        IdentityProviderRoleMapping @relation(fields: [roleMappingId], references: [id], onDelete: Cascade)
+  roleMappingId      String                      @map("role_mapping_id")
+  role               Role                        @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  roleId             String                      @map("role_id")
+
+  @@index([roleMappingId])
+  @@index([roleId])
+  @@map("external_role_grants")
+}
+
+model OidcAuthorizationRequest {
+  id                    String                  @id @default(uuid())
+  stateHash             String                  @unique @map("state_hash")
+  browserBindingHash    String                  @map("browser_binding_hash")
+  encryptedCodeVerifier String                  @map("encrypted_code_verifier")
+  encryptedNonce        String                  @map("encrypted_nonce")
+  redirectUri           String                  @map("redirect_uri")
+  intent                OidcAuthorizationIntent @default(LOGIN)
+  expiresAt             DateTime                @map("expires_at")
+  createdAt             DateTime                @default(now()) @map("created_at")
+
+  provider       IdentityProvider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId     String            @map("provider_id")
+  user           User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String?           @map("user_id")
+  unlinkTarget   ExternalIdentity? @relation("OidcUnlinkTarget", fields: [unlinkTargetId], references: [id], onDelete: Cascade)
+  unlinkTargetId String?           @map("unlink_target_id")
+
+  @@index([expiresAt])
+  @@map("oidc_authorization_requests")
+}
+
+model OidcLoginCode {
+  id            String    @id @default(uuid())
+  tokenHash     String    @unique @map("token_hash")
+  userAgentHash String    @map("user_agent_hash")
+  expiresAt     DateTime  @map("expires_at")
+  usedAt        DateTime? @map("used_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String           @map("user_id")
+  provider           IdentityProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId         String           @map("provider_id")
+  externalIdentity   ExternalIdentity @relation(fields: [externalIdentityId], references: [id], onDelete: Cascade)
+  externalIdentityId String           @map("external_identity_id")
+
+  @@index([expiresAt, usedAt])
+  @@map("oidc_login_codes")
+}
+
+model Acl {
+  id        String   @id @default(uuid())
+  resource  String
+  action    String
+  allowed   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId String @map("role_id")
+
+  @@unique([roleId, resource, action])
+  @@map("acls")
+}
+
+model UserPermission {
+  id        String   @id @default(uuid())
+  resource  String
+  action    String
+  allowed   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  @@unique([userId, resource, action])
+  @@map("user_permissions")
+}
+
+enum ResourceAclEffect {
+  ALLOW
+  DENY
+}
+
+model ResourceAclEntry {
+  id                String            @id @default(uuid())
+  recipientKey      String            @map("recipient_key")
+  targetKey         String            @map("target_key")
+  action            String
+  effect            ResourceAclEffect
+  inheritToChildren Boolean           @default(true) @map("inherit_to_children")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  user    User?   @relation("ResourceAclUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId  String? @map("user_id")
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  groupId String? @map("group_id")
+
+  space      KnowledgeSpace? @relation("ResourceAclEntrySpace", fields: [spaceId], references: [id], onDelete: Cascade)
+  spaceId    String?         @map("space_id")
+  category   Category?       @relation("ResourceAclEntryCategory", fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String?         @map("category_id")
+  page       Page?           @relation("ResourceAclEntryPage", fields: [pageId], references: [id], onDelete: Cascade)
+  pageId     String?         @map("page_id")
+  note       Note?           @relation("ResourceAclEntryNote", fields: [noteId], references: [id], onDelete: Cascade)
+  noteId     String?         @map("note_id")
+  standard   Standard?       @relation("ResourceAclEntryStandard", fields: [standardId], references: [id], onDelete: Cascade)
+  standardId String?         @map("standard_id")
+
+  @@unique([recipientKey, targetKey, action])
+  @@index([userId, action])
+  @@index([groupId, action])
+  @@index([targetKey, action])
+  @@map("resource_acl_entries")
+}
+
+model ResourceAclBoundary {
+  id        String   @id @default(uuid())
+  targetKey String   @map("target_key")
+  action    String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  space      KnowledgeSpace? @relation("ResourceAclBoundarySpace", fields: [spaceId], references: [id], onDelete: Cascade)
+  spaceId    String?         @map("space_id")
+  category   Category?       @relation("ResourceAclBoundaryCategory", fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String?         @map("category_id")
+  page       Page?           @relation("ResourceAclBoundaryPage", fields: [pageId], references: [id], onDelete: Cascade)
+  pageId     String?         @map("page_id")
+  note       Note?           @relation("ResourceAclBoundaryNote", fields: [noteId], references: [id], onDelete: Cascade)
+  noteId     String?         @map("note_id")
+  standard   Standard?       @relation("ResourceAclBoundaryStandard", fields: [standardId], references: [id], onDelete: Cascade)
+  standardId String?         @map("standard_id")
+
+  @@unique([targetKey, action])
+  @@index([targetKey, action])
+  @@map("resource_acl_boundaries")
+}
+
+// ══════════════════════════════════════════════
+// WIKI-CORE: categories, pages, page_versions
+// ══════════════════════════════════════════════
+
+enum SpaceVisibility {
+  OPEN
+  RESTRICTED
+}
+
+model KnowledgeSpace {
+  id           String          @id @default(uuid())
+  name         String          @unique
+  slug         String          @unique
+  description  String?
+  visibility   SpaceVisibility @default(OPEN)
+  enabledKinds KnowledgeKind[] @default([WIKI]) @map("enabled_kinds")
+  isSystem     Boolean         @default(false) @map("is_system")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  responsibleGroup   Group?  @relation(fields: [responsibleGroupId], references: [id], onDelete: SetNull)
+  responsibleGroupId String? @map("responsible_group_id")
+
+  categories         Category[]
+  pages              Page[]
+  notes              Note[]
+  standards          Standard[]
+  resourceAclEntries ResourceAclEntry[]    @relation("ResourceAclEntrySpace")
+  aclBoundaries      ResourceAclBoundary[] @relation("ResourceAclBoundarySpace")
+
+  @@index([visibility])
+  @@index([responsibleGroupId])
+  @@map("knowledge_spaces")
+}
+
+model Category {
+  id          String        @id @default(uuid())
+  name        String
+  slug        String
+  scope       CategoryScope @default(WIKI)
+  description String?
+  icon        String?
+  sortOrder   Int           @default(0) @map("sort_order")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  space              KnowledgeSpace        @relation(fields: [spaceId], references: [id], onDelete: Restrict)
+  spaceId            String                @map("space_id")
+  pages              Page[]
+  notes              Note[]
+  standards          Standard[]
+  resourceAclEntries ResourceAclEntry[]    @relation("ResourceAclEntryCategory")
+  aclBoundaries      ResourceAclBoundary[] @relation("ResourceAclBoundaryCategory")
+
+  @@unique([spaceId, scope, name])
+  @@unique([spaceId, scope, slug])
+  @@index([spaceId, scope])
+  @@map("categories")
+}
+
+enum CategoryScope {
+  WIKI
+  NOTE
+  STANDARD
+}
+
+enum PageType {
+  FOLDER
+  PAGE
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Page {
+  id                String        @id @default(uuid())
+  title             String
+  slug              String        @unique
+  type              PageType      @default(PAGE)
+  content           String        @default("")
+  excerpt           String?
+  status            PageStatus    @default(DRAFT)
+  isPublic          Boolean       @default(false) @map("is_public")
+  mcpVisible        Boolean       @default(false) @map("mcp_visible")
+  knowledgeType     KnowledgeKind @default(WIKI) @map("knowledge_type")
+  knowledgePriority Int           @default(2) @map("knowledge_priority")
+  version           Int           @default(1)
+  sortOrder         Int           @default(0) @map("sort_order")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  deletedAt         DateTime?     @map("deleted_at")
+
+  space       KnowledgeSpace @relation(fields: [spaceId], references: [id], onDelete: Restrict)
+  spaceId     String         @map("space_id")
+  author      User           @relation(fields: [authorId], references: [id])
+  authorId    String         @map("author_id")
+  deletedBy   User?          @relation("DeletedPages", fields: [deletedById], references: [id])
+  deletedById String?        @map("deleted_by")
+
+  category   Category? @relation(fields: [categoryId], references: [id])
+  categoryId String?   @map("category_id")
+
+  parent   Page?   @relation("PageTree", fields: [parentId], references: [id])
+  parentId String? @map("parent_id")
+  children Page[]  @relation("PageTree")
+
+  versions           PageVersion[]
+  drafts             PageDraft[]
+  tags               TagsOnPages[]
+  bookmarks          Bookmark[]
+  media              PageMedia[]
+  outgoingLinks      PageLink[]            @relation("PageLinkSource")
+  incomingLinks      PageLink[]            @relation("PageLinkTarget")
+  promotedNotes      Note[]                @relation("PromotedNotePage")
+  standardLinks      StandardPageLink[]
+  resourceAclEntries ResourceAclEntry[]    @relation("ResourceAclEntryPage")
+  aclBoundaries      ResourceAclBoundary[] @relation("ResourceAclBoundaryPage")
+
+  @@index([spaceId, deletedAt])
+  @@map("pages")
+}
+
+model PageVersion {
+  id            String   @id @default(uuid())
+  title         String
+  content       String
+  version       Int
+  changeMessage String?  @map("change_message")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  page   Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId String @map("page_id")
+
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String @map("author_id")
+
+  @@map("page_versions")
+}
+
+/**
+ * Nicht gespeicherter Entwurf einer Seite je Benutzer (Autosave).
+ * Genau ein Entwurf pro (Seite, Benutzer) – ein erneuter Autosave überschreibt
+ * ihn (Upsert). Wird beim echten Speichern der Seite wieder entfernt.
+ */
+model PageDraft {
+  id         String     @id @default(uuid())
+  title      String
+  content    String
+  status     PageStatus @default(DRAFT)
+  isPublic   Boolean    @default(false) @map("is_public")
+  mcpVisible Boolean    @default(false) @map("mcp_visible")
+  tags       String[]
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  page   Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId String @map("page_id")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  @@unique([pageId, userId])
+  @@map("page_drafts")
+}
+
+// ══════════════════════════════════════════════
+// TAGS: tags, tags_on_pages
+// ══════════════════════════════════════════════
+
+model Tag {
+  id    String  @id @default(uuid())
+  name  String  @unique
+  slug  String  @unique
+  color String?
+
+  pages TagsOnPages[]
+  notes TagsOnNotes[]
+
+  @@map("tags")
+}
+
+model TagsOnPages {
+  page   Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId String @map("page_id")
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId  String @map("tag_id")
+
+  @@id([pageId, tagId])
+  @@map("tags_on_pages")
+}
+
+// ══════════════════════════════════════════════
+// MEDIA: Datei-Uploads
+// ══════════════════════════════════════════════
+
+model Media {
+  id        String   @id @default(uuid())
+  filename  String
+  filepath  String
+  mimetype  String
+  size      Int
+  altText   String?  @map("alt_text")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+  uploadedById String @map("uploaded_by")
+
+  pages PageMedia[]
+
+  @@map("media")
+}
+
+enum NoteStatus {
+  CAPTURED
+  PROMOTED
+  ARCHIVED
+}
+
+enum NoteSharePermission {
+  VIEW
+  EDIT
+}
+
+enum KnowledgeKind {
+  NOTE
+  WIKI
+  STANDARD
+}
+
+enum KnowledgeSensitivity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Note {
+  id                String        @id @default(uuid())
+  title             String?
+  content           String
+  status            NoteStatus    @default(CAPTURED)
+  mcpVisible        Boolean       @default(false) @map("mcp_visible")
+  knowledgeType     KnowledgeKind @default(NOTE) @map("knowledge_type")
+  knowledgePriority Int           @default(3) @map("knowledge_priority")
+  deletedAt         DateTime?     @map("deleted_at")
+  deletedById       String?       @map("deleted_by")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  space   KnowledgeSpace? @relation(fields: [spaceId], references: [id], onDelete: Restrict)
+  spaceId String?         @map("space_id")
+  owner   User            @relation("NoteOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String          @map("owner_id")
+
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId String?   @map("category_id")
+
+  promotedPage   Page?   @relation("PromotedNotePage", fields: [promotedPageId], references: [id], onDelete: SetNull)
+  promotedPageId String? @map("promoted_page_id")
+
+  suggestedType            KnowledgeKind?
+  classificationConfidence Float?                @map("classification_confidence")
+  classificationReason     String?               @map("classification_reason")
+  qualityScore             Float?                @map("quality_score")
+  maturityScore            Float?                @map("maturity_score")
+  sensitivity              KnowledgeSensitivity?
+  assessedAt               DateTime?             @map("assessed_at")
+
+  tags               TagsOnNotes[]
+  shares             NoteShare[]
+  resourceAclEntries ResourceAclEntry[]    @relation("ResourceAclEntryNote")
+  aclBoundaries      ResourceAclBoundary[] @relation("ResourceAclBoundaryNote")
+
+  @@index([ownerId, updatedAt])
+  @@index([spaceId, deletedAt])
+  @@index([status, deletedAt])
+  @@map("notes")
+}
+
+model NoteShare {
+  note       Note                @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  noteId     String              @map("note_id")
+  user       User                @relation("NoteShareRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  userId     String              @map("user_id")
+  permission NoteSharePermission @default(VIEW)
+  sharedById String              @map("shared_by")
+  sharedAt   DateTime            @default(now()) @map("shared_at")
+
+  @@id([noteId, userId])
+  @@index([userId])
+  @@map("note_shares")
+}
+
+model TagsOnNotes {
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  noteId String @map("note_id")
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId  String @map("tag_id")
+
+  @@id([noteId, tagId])
+  @@map("tags_on_notes")
+}
+
+enum StandardStatus {
+  DRAFT
+  REVIEW
+  ACTIVE
+  DEPRECATED
+}
+
+enum StandardPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum StandardRuleType {
+  MUST
+  SHOULD
+  MAY
+  MUST_NOT
+}
+
+enum StandardExceptionStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+model Standard {
+  id                String           @id @default(uuid())
+  title             String
+  slug              String           @unique
+  description       String
+  justification     String
+  status            StandardStatus   @default(DRAFT)
+  priority          StandardPriority @default(MEDIUM)
+  version           Int              @default(1)
+  mcpVisible        Boolean          @default(false) @map("mcp_visible")
+  knowledgeType     KnowledgeKind    @default(STANDARD) @map("knowledge_type")
+  knowledgePriority Int              @default(1) @map("knowledge_priority")
+  validFrom         DateTime?        @map("valid_from")
+  validUntil        DateTime?        @map("valid_until")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  space         KnowledgeSpace @relation(fields: [spaceId], references: [id], onDelete: Restrict)
+  spaceId       String         @map("space_id")
+  createdBy     User           @relation("StandardCreator", fields: [createdById], references: [id])
+  createdById   String         @map("created_by")
+  responsible   User           @relation("StandardResponsible", fields: [responsibleId], references: [id])
+  responsibleId String         @map("responsible_id")
+  category      Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId    String?        @map("category_id")
+
+  classificationConfidence Float?                @map("classification_confidence")
+  classificationReason     String?               @map("classification_reason")
+  qualityScore             Float?                @map("quality_score")
+  maturityScore            Float?                @map("maturity_score")
+  sensitivity              KnowledgeSensitivity?
+  contradictions           Json                  @default("[]")
+  suggestedTitle           String?               @map("suggested_title")
+  suggestedTags            Json                  @default("[]") @map("suggested_tags")
+  suggestedCategoryId      String?               @map("suggested_category_id")
+  conversionSuggestion     String?               @map("conversion_suggestion")
+  assessedAt               DateTime?             @map("assessed_at")
+
+  rules              StandardRule[]
+  versions           StandardVersion[]
+  pages              StandardPageLink[]
+  exceptions         StandardException[]
+  resourceAclEntries ResourceAclEntry[]    @relation("ResourceAclEntryStandard")
+  aclBoundaries      ResourceAclBoundary[] @relation("ResourceAclBoundaryStandard")
+
+  @@index([status, priority])
+  @@index([spaceId])
+  @@index([categoryId])
+  @@map("standards")
+}
+
+model StandardRule {
+  id               String           @id @default(uuid())
+  title            String
+  description      String?
+  type             StandardRuleType @default(MUST)
+  sortOrder        Int              @default(0) @map("sort_order")
+  minVcpu          Int?             @map("min_vcpu")
+  minRamMb         Int?             @map("min_ram_mb")
+  backupRequired   Boolean?         @map("backup_required")
+  allowedPorts     Json             @default("[]") @map("allowed_ports")
+  allowedNetworks  Json             @default("[]") @map("allowed_networks")
+  namingConvention String?          @map("naming_convention")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  standard   Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  standardId String   @map("standard_id")
+
+  @@index([standardId, sortOrder])
+  @@map("standard_rules")
+}
+
+model StandardVersion {
+  id         String   @id @default(uuid())
+  version    Int
+  snapshot   Json
+  createdAt  DateTime @default(now()) @map("created_at")
+  standard   Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  standardId String   @map("standard_id")
+  author     User     @relation(fields: [authorId], references: [id])
+  authorId   String   @map("author_id")
+
+  @@unique([standardId, version])
+  @@map("standard_versions")
+}
+
+model StandardPageLink {
+  standard   Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  standardId String   @map("standard_id")
+  page       Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId     String   @map("page_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@id([standardId, pageId])
+  @@index([pageId])
+  @@map("standard_page_links")
+}
+
+model StandardException {
+  id            String                  @id @default(uuid())
+  reason        String
+  status        StandardExceptionStatus @default(REQUESTED)
+  expiresAt     DateTime?               @map("expires_at")
+  decisionNote  String?                 @map("decision_note")
+  createdAt     DateTime                @default(now()) @map("created_at")
+  updatedAt     DateTime                @updatedAt @map("updated_at")
+  standard      Standard                @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  standardId    String                  @map("standard_id")
+  requestedBy   User                    @relation("StandardExceptionRequester", fields: [requestedById], references: [id])
+  requestedById String                  @map("requested_by")
+  responsible   User                    @relation("StandardExceptionResponsible", fields: [responsibleId], references: [id])
+  responsibleId String                  @map("responsible_id")
+  decidedBy     User?                   @relation("StandardExceptionDecider", fields: [decidedById], references: [id])
+  decidedById   String?                 @map("decided_by")
+
+  @@index([standardId, status])
+  @@map("standard_exceptions")
+}
+
+/**
+ * Reviewpflichtiger Änderungsvorschlag für bereits veröffentlichte Inhalte.
+ * Phase 9c legt nur das Modell an; Erstellung und Review folgen separat.
+ */
+model KnowledgeChangeRequest {
+  id           String    @id @default(uuid())
+  resourceType String    @map("resource_type")
+  resourceId   String    @map("resource_id")
+  proposedData Json      @map("proposed_data")
+  status       String    @default("PENDING")
+  reviewedAt   DateTime? @map("reviewed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  requestedBy   User    @relation("KnowledgeChangeRequester", fields: [requestedById], references: [id])
+  requestedById String  @map("requested_by")
+  reviewedBy    User?   @relation("KnowledgeChangeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedById  String? @map("reviewed_by")
+
+  @@index([resourceType, resourceId])
+  @@index([status, createdAt])
+  @@map("knowledge_change_requests")
+}
+
+model PageLink {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  source   Page   @relation("PageLinkSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceId String @map("source_id")
+  target   Page   @relation("PageLinkTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  targetId String @map("target_id")
+
+  @@unique([sourceId, targetId])
+  @@index([targetId])
+  @@map("page_links")
+}
+
+model PageMedia {
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId    String   @map("page_id")
+  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  mediaId   String   @map("media_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([pageId, mediaId])
+  @@map("page_media")
+}
+
+// ══════════════════════════════════════════════
+// SYSTEM: sessions, audit_logs, settings, bookmarks
+// ══════════════════════════════════════════════
+
+model Session {
+  id                   String    @id @default(uuid())
+  tokenHash            String    @unique @map("token_hash")
+  familyId             String    @map("family_id")
+  ipAddress            String?   @map("ip_address")
+  userAgent            String?   @map("user_agent")
+  expiresAt            DateTime  @map("expires_at")
+  rotatedAt            DateTime? @map("rotated_at")
+  revokedAt            DateTime? @map("revoked_at")
+  providerVerifiedAt   DateTime? @map("provider_verified_at")
+  providerRecheckAfter DateTime? @map("provider_recheck_after")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String            @map("user_id")
+  externalIdentity   ExternalIdentity? @relation(fields: [externalIdentityId], references: [id], onDelete: SetNull)
+  externalIdentityId String?           @map("external_identity_id")
+
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model McpAccessToken {
+  id              String    @id @default(uuid())
+  name            String
+  tokenHash       String    @unique @map("token_hash")
+  tokenPrefix     String    @map("token_prefix")
+  oauthClientId   String?   @map("oauth_client_id")
+  resource        String?
+  requestedScopes String[]  @default([]) @map("requested_scopes")
+  lastUsedAt      DateTime? @map("last_used_at")
+  expiresAt       DateTime? @map("expires_at")
+  revokedAt       DateTime? @map("revoked_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  oauthClient McpOAuthClient? @relation(fields: [oauthClientId], references: [clientId], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([oauthClientId, createdAt])
+  @@map("mcp_access_tokens")
+}
+
+/**
+ * Benutzerbezogener API-Key fuer Skripte und Automatisierungen.
+ * `key` enthaelt ausschliesslich einen SHA-256-Lookup-Hash; der Klartext wird
+ * nur bei der Erstellung zurueckgegeben. `keyHash` ist die bcrypt-Pruefsumme.
+ */
+model ApiKey {
+  id          String    @id @default(uuid())
+  name        String    @db.VarChar(100)
+  key         String    @unique @db.VarChar(64)
+  keyHash     String    @map("key_hash") @db.VarChar(60)
+  permissions Json?
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  isActive    Boolean   @default(true) @map("is_active")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  @@index([userId, createdAt])
+  @@map("api_keys")
+}
+
+model McpOAuthClient {
+  id                      String    @id @default(uuid())
+  clientId                String    @unique @map("client_id")
+  clientName              String    @map("client_name")
+  redirectUris            String[]  @map("redirect_uris")
+  grantTypes              String[]  @default(["authorization_code", "refresh_token"]) @map("grant_types")
+  responseTypes           String[]  @default(["code"]) @map("response_types")
+  tokenEndpointAuthMethod String    @default("none") @map("token_endpoint_auth_method")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  lastUsedAt              DateTime? @map("last_used_at")
+
+  authorizationRequests McpOAuthAuthorizationRequest[]
+  authorizationCodes    McpOAuthAuthorizationCode[]
+  refreshTokens         McpOAuthRefreshToken[]
+  accessTokens          McpAccessToken[]
+
+  @@index([lastUsedAt])
+  @@map("mcp_oauth_clients")
+}
+
+model McpOAuthAuthorizationRequest {
+  id            String   @id @default(uuid())
+  clientId      String   @map("client_id")
+  redirectUri   String   @map("redirect_uri")
+  state         String?
+  codeChallenge String   @map("code_challenge")
+  resource      String
+  scopes        String[] @default([])
+  expiresAt     DateTime @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  client McpOAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("mcp_oauth_authorization_requests")
+}
+
+model McpOAuthAuthorizationCode {
+  id            String    @id @default(uuid())
+  codeHash      String    @unique @map("code_hash")
+  clientId      String    @map("client_id")
+  userId        String    @map("user_id")
+  redirectUri   String    @map("redirect_uri")
+  codeChallenge String    @map("code_challenge")
+  resource      String
+  scopes        String[]  @default([])
+  expiresAt     DateTime  @map("expires_at")
+  usedAt        DateTime? @map("used_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  client McpOAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("mcp_oauth_authorization_codes")
+}
+
+model McpOAuthRefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique @map("token_hash")
+  familyId  String    @map("family_id")
+  clientId  String    @map("client_id")
+  userId    String    @map("user_id")
+  resource  String
+  scopes    String[]  @default([])
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  rotatedAt DateTime? @map("rotated_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  client McpOAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("mcp_oauth_refresh_tokens")
+}
+
+enum IntegrationProvider {
+  MICROSOFT_TODO
+}
+
+enum IntegrationConnectionStatus {
+  ACTIVE
+  NEEDS_REAUTH
+  ERROR
+  DISCONNECTED
+}
+
+enum IntegrationSyncStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum ExternalItemSyncDirection {
+  IMPORT
+  EXPORT
+}
+
+model IntegrationConnection {
+  id                  String                      @id @default(uuid())
+  provider            IntegrationProvider
+  encryptedTokenCache String?                     @map("encrypted_token_cache")
+  scopes              String[]                    @default([])
+  status              IntegrationConnectionStatus @default(ACTIVE)
+  externalAccountId   String?                     @map("external_account_id")
+  externalAccountName String?                     @map("external_account_name")
+  selectedListIds     String[]                    @default([]) @map("selected_list_ids")
+  expiresAt           DateTime?                   @map("expires_at")
+  lastSyncedAt        DateTime?                   @map("last_synced_at")
+  createdAt           DateTime                    @default(now()) @map("created_at")
+  updatedAt           DateTime                    @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  mappings ExternalItemMapping[]
+  syncRuns IntegrationSyncRun[]
+
+  @@unique([userId, provider])
+  @@index([provider, status])
+  @@map("integration_connections")
+}
+
+model IntegrationOAuthState {
+  id                    String              @id @default(uuid())
+  provider              IntegrationProvider
+  stateHash             String              @unique @map("state_hash")
+  encryptedCodeVerifier String              @map("encrypted_code_verifier")
+  expiresAt             DateTime            @map("expires_at")
+  createdAt             DateTime            @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  @@index([expiresAt])
+  @@map("integration_oauth_states")
+}
+
+model ExternalItemMapping {
+  id                String                    @id @default(uuid())
+  provider          IntegrationProvider
+  externalId        String                    @map("external_id")
+  externalListId    String?                   @map("external_list_id")
+  localResourceType String                    @map("local_resource_type")
+  localResourceId   String                    @map("local_resource_id")
+  direction         ExternalItemSyncDirection @default(IMPORT)
+  lastLocalHash     String?                   @map("last_local_hash")
+  lastExternalHash  String?                   @map("last_external_hash")
+  localUpdatedAt    DateTime?                 @map("local_updated_at")
+  externalUpdatedAt DateTime?                 @map("external_updated_at")
+  detachedAt        DateTime?                 @map("detached_at")
+  externalDeletedAt DateTime?                 @map("external_deleted_at")
+  lastSyncedAt      DateTime                  @default(now()) @map("last_synced_at")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId String                @map("connection_id")
+
+  @@unique([connectionId, externalId])
+  @@unique([connectionId, localResourceType, localResourceId])
+  @@index([localResourceType, localResourceId])
+  @@map("external_item_mappings")
+}
+
+model IntegrationSyncRun {
+  id            String                @id @default(uuid())
+  status        IntegrationSyncStatus @default(RUNNING)
+  importedCount Int                   @default(0) @map("imported_count")
+  skippedCount  Int                   @default(0) @map("skipped_count")
+  failedCount   Int                   @default(0) @map("failed_count")
+  updatedCount  Int                   @default(0) @map("updated_count")
+  deletedCount  Int                   @default(0) @map("deleted_count")
+  error         String?
+  startedAt     DateTime              @default(now()) @map("started_at")
+  finishedAt    DateTime?             @map("finished_at")
+
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId String                @map("connection_id")
+
+  @@index([connectionId, startedAt])
+  @@map("integration_sync_runs")
+}
+
+enum BackupDestinationType {
+  LOCAL
+  SFTP
+  S3
+}
+
+enum BackupJobOperation {
+  BACKUP
+  VERIFY
+  CONNECTION_TEST
+  RESTORE_PREFLIGHT
+}
+
+enum BackupJobTrigger {
+  MANUAL
+  SCHEDULED
+}
+
+enum BackupJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+/// Konfiguriertes Sicherungsziel. `config` enthält ausschließlich nicht geheime
+/// Verbindungsdaten; Passwörter und private Schlüssel liegen verschlüsselt in
+/// `encrypted_credentials` und werden niemals über die API ausgegeben.
+model BackupDestination {
+  id                   String                @id @default(uuid())
+  name                 String                @unique
+  type                 BackupDestinationType
+  config               Json
+  encryptedCredentials String?               @map("encrypted_credentials")
+  isEnabled            Boolean               @default(true) @map("is_enabled")
+  lastTestedAt         DateTime?             @map("last_tested_at")
+  lastTestSucceeded    Boolean?              @map("last_test_succeeded")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+
+  createdBy   User?   @relation("BackupDestinationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String? @map("created_by_id")
+
+  plans BackupPlan[]
+  jobs  BackupJob[]
+
+  @@index([type, isEnabled])
+  @@map("backup_destinations")
+}
+
+/// Strukturierter Zeitplan ohne frei eingegebenen Cron-Ausdruck.
+model BackupPlan {
+  id               String    @id @default(uuid())
+  name             String    @unique
+  enabled          Boolean   @default(false)
+  scheduleHour     Int       @map("schedule_hour")
+  scheduleMinute   Int       @map("schedule_minute")
+  timezone         String
+  weekdays         Int[]     @default([1, 2, 3, 4, 5, 6, 7])
+  retentionDaily   Int       @default(7) @map("retention_daily")
+  retentionWeekly  Int       @default(4) @map("retention_weekly")
+  retentionMonthly Int       @default(6) @map("retention_monthly")
+  nextRunAt        DateTime? @map("next_run_at")
+  lastRunAt        DateTime? @map("last_run_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  destination   BackupDestination @relation(fields: [destinationId], references: [id], onDelete: Restrict)
+  destinationId String            @map("destination_id")
+  createdBy     User?             @relation("BackupPlanCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById   String?           @map("created_by_id")
+
+  jobs BackupJob[]
+
+  @@index([enabled, nextRunAt])
+  @@index([destinationId])
+  @@map("backup_plans")
+}
+
+/// Dauerhafte, redigierte Jobhistorie. Technische Fehlertexte dürfen keine
+/// Zugangsdaten enthalten; ausführliche Worker-Logs bleiben strukturiert.
+model BackupJob {
+  id               String             @id @default(uuid())
+  operation        BackupJobOperation @default(BACKUP)
+  trigger          BackupJobTrigger   @default(MANUAL)
+  status           BackupJobStatus    @default(QUEUED)
+  scheduledFor     DateTime?          @map("scheduled_for")
+  startedAt        DateTime?          @map("started_at")
+  finishedAt       DateTime?          @map("finished_at")
+  artifactPath     String?            @map("artifact_path")
+  artifactSize     BigInt?            @map("artifact_size")
+  checksum         String?
+  errorCode        String?            @map("error_code")
+  errorMessage     String?            @map("error_message")
+  restorePreflight Json?              @map("restore_preflight")
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  plan          BackupPlan?        @relation(fields: [planId], references: [id], onDelete: SetNull)
+  planId        String?            @map("plan_id")
+  destination   BackupDestination? @relation(fields: [destinationId], references: [id], onDelete: SetNull)
+  destinationId String?            @map("destination_id")
+  requestedBy   User?              @relation("BackupJobRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  requestedById String?            @map("requested_by_id")
+  sourceJob     BackupJob?         @relation("BackupRestoreSource", fields: [sourceJobId], references: [id], onDelete: SetNull)
+  sourceJobId   String?            @map("source_job_id")
+  derivedJobs   BackupJob[]        @relation("BackupRestoreSource")
+
+  @@unique([planId, scheduledFor])
+  @@index([status, createdAt])
+  @@index([destinationId, createdAt])
+  @@index([sourceJobId])
+  @@map("backup_jobs")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  resource   String
+  resourceId String?  @map("resource_id")
+  details    Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String? @map("user_id")
+
+  @@map("audit_logs")
+}
+
+model Setting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  type        String   @default("string")
+  description String?
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model SmtpConfiguration {
+  id                String   @id @default("default")
+  host              String
+  port              Int
+  security          String
+  username          String?
+  encryptedPassword String?  @map("encrypted_password")
+  fromEmail         String   @map("from_email")
+  fromName          String   @map("from_name")
+  replyTo           String?  @map("reply_to")
+  isEnabled         Boolean  @default(false) @map("is_enabled")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("smtp_configurations")
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  page   Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  pageId String @map("page_id")
+
+  @@unique([userId, pageId])
+  @@map("bookmarks")
+}

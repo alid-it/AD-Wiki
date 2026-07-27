@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ad-wiki": {
+      "type": "http",
+      "url": "https://wiki.example.de/mcp"
+    }
+  }
+}

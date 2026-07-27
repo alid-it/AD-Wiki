@@ -1,0 +1,262 @@
+groups:
+  - name: ad-wiki-availability
+    rules:
+      - alert: ADWikiMetricsTargetUnavailable
+        expr: up{job="ad-wiki-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AD-Wiki API-Metriken sind nicht erreichbar"
+          description: "Prometheus kann den geschützten Metrik-Endpunkt seit mindestens zwei Minuten nicht abrufen."
+
+      - alert: ADWikiServiceUnavailable
+        expr: probe_success{job="ad-wiki-blackbox"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AD-Wiki-Dienst {{ $labels.service }} ist ausgefallen"
+          description: "Der externe HTTP-Healthcheck für {{ $labels.instance }} schlägt seit mindestens zwei Minuten fehl."
+
+      - alert: ADWikiDependencyUnavailable
+        expr: ad_wiki_dependency_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AD-Wiki-Abhängigkeit {{ $labels.dependency }} ist nicht bereit"
+          description: "Die API kann {{ $labels.dependency }} seit mindestens zwei Minuten nicht erreichen."
+
+  - name: ad-wiki-api-quality
+    rules:
+      - alert: ADWikiHighServerErrorRate
+        expr: sum(rate(ad_wiki_http_requests_total{status_class="5xx"}[5m])) / clamp_min(sum(rate(ad_wiki_http_requests_total[5m])), 0.001) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki API hat eine erhöhte Serverfehlerquote"
+          description: "Mehr als fünf Prozent der API-Anfragen enden seit mindestens zehn Minuten mit HTTP 5xx."
+
+      - alert: ADWikiHighRequestLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(ad_wiki_http_request_duration_seconds_bucket[5m]))) > 1.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki API antwortet ungewöhnlich langsam"
+          description: "Die p95-Antwortzeit liegt seit mindestens zehn Minuten über 1,5 Sekunden."
+
+      - alert: ADWikiRateLimitSpike
+        expr: sum(increase(ad_wiki_security_http_responses_total{status_code="429"}[5m])) >= 20
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki Rate-Limit wird ungewöhnlich häufig ausgelöst"
+          description: "Innerhalb von fünf Minuten wurden mindestens 20 Anfragen mit HTTP 429 abgewiesen."
+
+  - name: ad-wiki-security
+    rules:
+      - alert: ADWikiFailedLoginSpike
+        expr: increase(ad_wiki_login_attempts_total{result="failure"}[5m]) >= 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ungewöhnlich viele fehlgeschlagene AD-Wiki-Logins"
+          description: "Innerhalb von fünf Minuten sind mindestens zehn interaktive Anmeldungen fehlgeschlagen."
+
+      - alert: ADWikiUnauthorizedSpike
+        expr: increase(ad_wiki_security_http_responses_total{status_code="401"}[5m]) >= 25
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ungewöhnlich viele nicht autorisierte AD-Wiki-Anfragen"
+          description: "Innerhalb von fünf Minuten wurden mindestens 25 Anfragen mit HTTP 401 abgewiesen."
+
+      - alert: ADWikiForbiddenSpike
+        expr: increase(ad_wiki_security_http_responses_total{status_code="403"}[5m]) >= 25
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ungewöhnlich viele verbotene AD-Wiki-Anfragen"
+          description: "Innerhalb von fünf Minuten wurden mindestens 25 Anfragen mit HTTP 403 abgewiesen."
+
+      - alert: ADWikiApiKeyFailureSpike
+        expr: increase(ad_wiki_api_key_auth_attempts_total{result="failure"}[5m]) >= 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ungewöhnlich viele ungültige AD-Wiki-API-Keys"
+          description: "Innerhalb von fünf Minuten sind mindestens zehn API-Key-Prüfungen fehlgeschlagen."
+
+      - alert: ADWikiMcpAuthenticationFailureSpike
+        expr: increase(ad_wiki_mcp_auth_attempts_total{result="failure"}[5m]) >= 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ungewöhnlich viele ungültige AD-Wiki-MCP-Tokens"
+          description: "Innerhalb von fünf Minuten sind mindestens zehn MCP-Tokenprüfungen fehlgeschlagen."
+
+      - alert: ADWikiMcpHighFailureRate
+        expr: |
+          (
+            sum(rate(ad_wiki_mcp_requests_total{result="failure"}[5m]))
+            /
+            clamp_min(sum(rate(ad_wiki_mcp_requests_total[5m])), 0.001)
+          ) > 0.20
+          and
+          sum(increase(ad_wiki_mcp_requests_total[5m])) >= 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki MCP hat eine erhöhte Fehlerquote"
+          description: "Mehr als 20 Prozent der MCP-Anfragen schlagen bei mindestens zehn Anfragen pro fünf Minuten fehl."
+
+  - name: ad-wiki-backups
+    rules:
+      - alert: ADWikiBackupStale
+        expr: ad_wiki_backup_stale == 1
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AD-Wiki-Backup ist veraltet"
+          description: "Es gibt keinen erfolgreichen Sicherungsstand innerhalb des konfigurierten RPO-Fensters."
+
+      - alert: ADWikiBackupFailed
+        expr: ad_wiki_backup_latest_failure_open == 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Letztes AD-Wiki-Backup ist fehlgeschlagen"
+          description: "Seit dem letzten fehlgeschlagenen Sicherungslauf wurde kein neuer erfolgreicher Stand erstellt."
+
+      - alert: ADWikiBackupJobStuck
+        expr: ad_wiki_backup_active_jobs > 0
+        for: 2h
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki-Backup läuft ungewöhnlich lange"
+          description: "Mindestens ein Sicherungsauftrag ist seit mehr als zwei Stunden aktiv."
+
+      - alert: ADWikiBackupWorkerUnavailable
+        expr: ad_wiki_backup_worker_up == 0 and ad_wiki_backup_enabled_plans > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AD-Wiki Backup-Worker ist nicht erreichbar"
+          description: "Bei aktivierten Sicherungsplänen fehlt seit mindestens zwei Minuten ein aktueller Worker-Heartbeat."
+
+      - alert: ADWikiBackupQueueStalled
+        expr: ad_wiki_backup_oldest_queued_age_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki Backup-Warteschlange wird nicht abgearbeitet"
+          description: "Der älteste Auftrag wartet seit mehr als fünf Minuten auf Verarbeitung."
+
+      - alert: ADWikiBackupScheduleMissed
+        expr: ad_wiki_backup_overdue_plans > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AD-Wiki Sicherungsplan wurde verpasst"
+          description: "Mindestens ein aktivierter Sicherungsplan ist über die konfigurierte Toleranz hinaus überfällig."
+
+  - name: ad-wiki-application-services
+    rules:
+      - alert: ADWikiUploadFilesystemNotInspectable
+        expr: ad_wiki_upload_filesystem_inspectable == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki Upload-Speicher kann nicht geprüft werden"
+          description: "Die API kann den freien Speicher des eingebundenen Upload-Volumes nicht ermitteln."
+
+      - alert: ADWikiUploadFilesystemLow
+        expr: ad_wiki_upload_filesystem_free_ratio <= 0.15 and ad_wiki_upload_filesystem_free_ratio > 0.08
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki Upload-Speicher wird knapp"
+          description: "Auf dem Upload-Volume sind nur noch {{ $value | humanizePercentage }} frei."
+
+      - alert: ADWikiUploadFilesystemCritical
+        expr: ad_wiki_upload_filesystem_free_ratio <= 0.08 and ad_wiki_upload_filesystem_inspectable == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AD-Wiki Upload-Speicher ist kritisch knapp"
+          description: "Auf dem Upload-Volume sind nur noch {{ $value | humanizePercentage }} frei."
+
+      - alert: ADWikiSmtpDeliveryFailed
+        expr: ad_wiki_smtp_latest_failure_open == 1 and ad_wiki_smtp_enabled == 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki SMTP-Versand ist fehlgeschlagen"
+          description: "Der letzte SMTP-Versuch ist fehlgeschlagen; Passwort-Reset-Mails können betroffen sein."
+
+      - alert: ADWikiAuditWriteFailed
+        expr: ad_wiki_audit_latest_failure_open == 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AD-Wiki Audit-Protokoll kann nicht geschrieben werden"
+          description: "Der letzte Audit-Schreibversuch ist fehlgeschlagen. Sicherheitsrelevante Änderungen sind möglicherweise nicht protokolliert."
+
+      - alert: ADWikiAuditLogNotReadable
+        expr: ad_wiki_audit_database_readable == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AD-Wiki Audit-Protokoll kann nicht gelesen werden"
+          description: "Die API kann den gespeicherten Audit-Bestand seit mindestens fünf Minuten nicht abfragen."
+
+  - name: ad-wiki-tls
+    rules:
+      - alert: ADWikiCertificateNotInspectable
+        expr: ad_wiki_tls_certificate_configured == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki-TLS-Zertifikat kann nicht geprüft werden"
+          description: "TLS_CERT_FILE fehlt oder das aktive Zertifikat ist für die API nicht lesbar."
+
+      - alert: ADWikiCertificateExpiringSoon
+        expr: ad_wiki_tls_certificate_days_remaining <= 30 and ad_wiki_tls_certificate_days_remaining > 7
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "AD-Wiki-TLS-Zertifikat läuft bald ab"
+          description: "Das aktive Zertifikat ist nur noch {{ $value }} volle Tage gültig."
+
+      - alert: ADWikiCertificateCritical
+        expr: ad_wiki_tls_certificate_days_remaining <= 7 and ad_wiki_tls_certificate_configured == 1
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AD-Wiki-TLS-Zertifikat läuft in Kürze ab"
+          description: "Das aktive Zertifikat ist nur noch {{ $value }} volle Tage gültig oder bereits abgelaufen."

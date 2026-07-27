@@ -1,0 +1,12 @@
+{
+  "extends": "../config/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    // CommonJS-Ausgabe, damit das NestJS-Backend (CJS-Runtime) das Paket
+    // zur Laufzeit laden kann. Next.js (Bundler) kommt damit ebenfalls klar.
+    "module": "commonjs",
+    "moduleResolution": "node"
+  },
+  "include": ["src"]
+}

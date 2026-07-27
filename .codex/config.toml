@@ -1,0 +1,14 @@
+[mcp_servers.MCP_DOCKER]
+command = "docker"
+args = [
+    "mcp",
+    "gateway",
+    "run",
+    "--profile",
+    "profile",
+]
+
+[mcp_servers.MCP_DOCKER.env]
+LOCALAPPDATA = 'C:\Users\danak\AppData\Local'
+ProgramData = 'C:\ProgramData'
+ProgramFiles = 'C:\Program Files'

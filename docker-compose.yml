@@ -1,0 +1,45 @@
+name: ad-wiki
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: adwiki-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: adwiki
+      POSTGRES_PASSWORD: master
+      POSTGRES_DB: adwiki_wiki
+    volumes:
+      - postgres_data:/var/lib/postgresql/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adwiki -d adwiki_wiki"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: adwiki-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:latest
+    container_name: adwiki-cloudbeaver
+    restart: unless-stopped
+    ports:
+      - "8978:8978"
+    volumes:
+      - cloudbeaver_data:/opt/cloudbeaver/workspace
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    name: ad-wiki_postgres_data
+  cloudbeaver_data:
+    name: ad-wiki_cloudbeaver_data
