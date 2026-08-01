@@ -71,12 +71,12 @@ Unautorisierte MCP-Anfragen liefern `401` mit einem `WWW-Authenticate`-Header, d
 Die geprüfte Vorlage liegt in `docs/mcp/codex-config.toml`. Alternativ:
 
 ```powershell
-codex mcp add ad-wiki --url https://wiki.example.de/mcp --oauth-resource https://wiki.example.de/mcp
+codex mcp add ad-wiki --url https://wiki.example.de/mcp
 codex mcp login ad-wiki --scopes mcp:read,mcp:write
 codex mcp get ad-wiki
 ```
 
-Für reinen Lesezugriff wird nur `mcp:read` angefordert. Die Syntax wurde mit Codex CLI `0.144.3` geprüft.
+Für reinen Lesezugriff wird nur `mcp:read` angefordert. `--oauth-resource` wird bewusst nicht gesetzt: Codex übernimmt die kanonische Resource aus der Protected Resource Metadata. Bei Codex CLI `0.145.0` kann eine zusätzlich konfigurierte Resource doppelt im Autorisierungsaufruf erscheinen und damit die Anmeldung verhindern. Die Syntax wurde mit Codex CLI `0.145.0` geprüft.
 
 ### Claude Code
 
@@ -88,6 +88,8 @@ claude mcp get ad-wiki
 ```
 
 Danach in Claude Code `/mcp` öffnen und die Browser-Anmeldung starten. Die Syntax wurde mit Claude Code `2.1.205` geprüft.
+
+Vor der Anmeldung zeigt `claude mcp get ad-wiki` bei funktionierender TLS-Verbindung `Needs authentication`. `Failed to connect` bedeutet dagegen, dass bereits Transport oder TLS scheitern. Selbstsignierte beziehungsweise intern ausgestellte Zertifikate müssen auf dem lokalen Rechner vertraut sein; die TLS-Prüfung darf nicht dauerhaft deaktiviert werden.
 
 Persönliche `ad_wiki_mcp_...`-Bearer-Tokens bleiben für kontrollierte Automatisierung verfügbar. Sie gehören ausschließlich in Secret Stores oder Umgebungsvariablen und niemals direkt in gemeinsam versionierte Konfigurationen.
 

@@ -200,6 +200,6 @@ test("Codex- und Claude-Beispiele enthalten den getesteten Streamable-HTTP-Endpu
     mcpServers: Record<string, { type: string; url: string }>;
   };
   assert.match(codex, /url = "https:\/\/wiki\.example\.de\/mcp"/);
-  assert.match(codex, /oauth_resource = "https:\/\/wiki\.example\.de\/mcp"/);
+  assert.doesNotMatch(codex, /oauth_resource/);
   assert.deepEqual(claude.mcpServers["ad-wiki"], { type: "http", url: "https://wiki.example.de/mcp" });
 });

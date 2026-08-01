@@ -46,8 +46,8 @@ const MCP_TOOL_GROUPS = [
   {
     key: 'overview',
     tools: [
-      ['list_knowledge', 'pages:read · notes:read · standards:read'],
-      ['search_knowledge', 'pages:read · notes:read · standards:read'],
+      ['list_knowledge', 'pages:read / notes:read / standards:read'],
+      ['search_knowledge', 'pages:read / notes:read / standards:read'],
     ],
   },
   {
@@ -79,8 +79,8 @@ const MCP_TOOL_GROUPS = [
       ['evaluate_against_standards', 'standards:read'],
       ['detect_source_conflicts', 'standards:read'],
       ['classify_content', 'mcp:read'],
-      ['suggest_tags', 'read on selected content'],
-      ['suggest_category', 'categories:read + content:read'],
+      ['suggest_tags', 'pages:read / notes:read / standards:read'],
+      ['suggest_category', 'categories:read'],
     ],
   },
   {
@@ -526,9 +526,9 @@ function AccessGuide() {
 
 function McpGuide({ endpoint }: { endpoint: string }) {
   const t = useTranslations('settings.setup');
-  const codexOAuth = `codex mcp add ad-wiki --url ${endpoint} --oauth-resource ${endpoint}\ncodex mcp login ad-wiki --scopes mcp:read`;
-  const codexToken = `$env:AD_WIKI_MCP_TOKEN = "ad_wiki_mcp_..."\ncodex mcp remove ad-wiki\ncodex mcp add ad-wiki --url ${endpoint} --bearer-token-env-var AD_WIKI_MCP_TOKEN`;
-  const claudeCode = `claude mcp add --transport http ad-wiki ${endpoint}\n# Danach in Claude Code: /mcp`;
+  const codexOAuth = `codex mcp add ad-wiki --url ${endpoint}\ncodex mcp login ad-wiki --scopes mcp:read`;
+  const codexToken = `$env:AD_WIKI_MCP_TOKEN = "ad_wiki_mcp_..."\ncodex mcp remove ad-wiki\ncodex mcp add ad-wiki --url ${endpoint} --bearer-token-env-var AD_WIKI_MCP_TOKEN\ncodex`;
+  const claudeCode = `claude mcp add --transport http ad-wiki ${endpoint}\nclaude mcp get ad-wiki\nclaude\n# Danach in Claude Code: /mcp → Authenticate`;
 
   return (
     <div id="setup-panel-mcp" role="tabpanel" aria-labelledby="setup-tab-mcp" className="flex flex-col gap-5">
@@ -556,6 +556,7 @@ function McpGuide({ endpoint }: { endpoint: string }) {
           <InstructionCard number="3" title={t('mcp.claudeCodeTitle')}>
             <p>{t('mcp.claudeCodeText')}</p>
             <CodeBlock label="Terminal" value={claudeCode} />
+            <Callout warning>{t('mcp.claudeCodeTlsHint')}</Callout>
           </InstructionCard>
           <InstructionCard number="4" title={t('mcp.claudeDesktopTitle')}>
             <p>{t('mcp.claudeDesktopText')}</p>
