@@ -91,9 +91,9 @@ gewünschten Releases benötigt:
 mkdir ad-wiki
 cd ad-wiki
 curl --fail --location --remote-name \
-  https://github.com/alid-it/AD-WIKI/releases/download/v1.0.0/docker-compose.yml
+  https://github.com/alid-it/AD-Wiki/releases/latest/download/docker-compose.yml
 curl --fail --location --remote-name \
-  https://github.com/alid-it/AD-WIKI/releases/download/v1.0.0/env.production.example
+  https://github.com/alid-it/AD-Wiki/releases/latest/download/env.production.example
 cp env.production.example .env
 nano .env
 docker compose config --quiet

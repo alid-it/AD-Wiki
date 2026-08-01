@@ -16,7 +16,7 @@ Berechtigungen, Versionierung, sicheren Backups und einem MCP-Endpunkt für
 Clients wie Codex oder Claude Code. Das Projekt ist ein strikt typisiertes
 TypeScript-Monorepo und wird als Docker-Compose-Stack veröffentlicht.
 
-Aktuelles Release: **[v1.0.0](https://github.com/alid-it/AD-WIKI/releases/tag/v1.0.0)**
+Aktuelles Release: **[neueste stabile Version](https://github.com/alid-it/AD-Wiki/releases/latest)**
 
 ## Funktionsumfang
 
@@ -69,10 +69,10 @@ mkdir ad-wiki
 cd ad-wiki
 
 curl --fail --location --remote-name \
-  https://github.com/alid-it/AD-WIKI/releases/download/v1.0.0/docker-compose.yml
+  https://github.com/alid-it/AD-Wiki/releases/latest/download/docker-compose.yml
 
 curl --fail --location --remote-name \
-  https://github.com/alid-it/AD-WIKI/releases/download/v1.0.0/env.production.example
+  https://github.com/alid-it/AD-Wiki/releases/latest/download/env.production.example
 
 cp env.production.example .env
 nano .env
