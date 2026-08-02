@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Questions and general discussions
+    url: https://github.com/alid-it/AD-Wiki/discussions
+    about: Ask questions, share ideas and discuss AD-Wiki here.
+
+  - name: Documentation
+    url: https://ad-wiki.danakiran.de/
+    about: Read the installation and usage documentation.
+
+  - name: Security vulnerability
+    url: https://github.com/alid-it/AD-Wiki/security
+    about: Do not report security vulnerabilities in public issues.

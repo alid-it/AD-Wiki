@@ -1,0 +1,68 @@
+name: Feature Request
+description: Suggest a new feature or improvement for AD-Wiki
+title: "[Feature]: "
+labels:
+  - enhancement
+  - triage
+
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Related area
+      options:
+        - Web interface
+        - API
+        - Authentication / SSO
+        - Users / Groups / Permissions
+        - Editor / Pages
+        - Search
+        - Backup / Restore
+        - Import / Export
+        - MCP integration
+        - Docker / Deployment
+        - Documentation
+        - General / Multiple areas
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem would this feature solve?
+      placeholder: Describe your workflow and why the current behavior is insufficient.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How should the feature work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any workarounds or alternative solutions.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add mockups, examples or links if helpful.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and discussions.
+          required: true
