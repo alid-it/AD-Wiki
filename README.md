@@ -1,5 +1,8 @@
 # AD-Wiki
 
+[![English](https://img.shields.io/badge/Language-English-2563eb)](README.md)
+[![Deutsch](https://img.shields.io/badge/Sprache-Deutsch-6b7280)](README.de.md)
+
 [![CI](https://github.com/alid-it/AD-WIKI/actions/workflows/ci.yml/badge.svg)](https://github.com/alid-it/AD-WIKI/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/alid-it/AD-WIKI?display_name=tag)](https://github.com/alid-it/AD-WIKI/releases/latest)
 ![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white)
@@ -8,61 +11,61 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 
-> Eine moderne, selbst hostbare Wissensplattform für Wiki-Inhalte, Notizen,
-> Standards und KI-gestützte Wissenszugriffe.
+> A modern, self-hostable knowledge platform for wiki content, notes,
+> standards, and AI-powered access to knowledge.
 
-AD-Wiki verbindet strukturiertes Wissensmanagement mit fein abgestuften
-Berechtigungen, Versionierung, sicheren Backups und einem MCP-Endpunkt für
-Clients wie Codex oder Claude Code. Das Projekt ist ein strikt typisiertes
-TypeScript-Monorepo und wird als Docker-Compose-Stack veröffentlicht.
+AD-Wiki combines structured knowledge management with fine-grained
+permissions, versioning, secure backups, and an MCP endpoint for clients such
+as Codex or Claude Code. The project is a strictly typed TypeScript monorepo
+distributed as a Docker Compose stack.
 
-Aktuelles Release: **[neueste stabile Version](https://github.com/alid-it/AD-Wiki/releases/latest)**
+Current release: **[latest stable version](https://github.com/alid-it/AD-Wiki/releases/latest)**
 
-## Funktionsumfang
+## Features
 
-### Wissen erstellen und organisieren
+### Create and organize knowledge
 
-- Hierarchie aus Bereichen, Kategorien, Ordnern und Seiten
-- WYSIWYG-Editor auf Basis von Tiptap sowie Markdown-Unterstützung
-- Entwürfe, Veröffentlichung, Papierkorb und Seitenversionen mit Vergleich
-- Tags, Bookmarks, Medienverwaltung und geschützte Datei-Streams
-- Globale Suche, verwandte Inhalte und grafische Seitenbeziehungen
-- Persönliche und freigegebene Notizen
-- Richtlinien und Standards mit Regeln, Versionen und Ausnahmen
-- Export als Markdown, PDF und ZIP
+- Hierarchies of areas, categories, folders, and pages
+- Tiptap-based WYSIWYG editor with Markdown support
+- Drafts, publishing, trash, and comparable page versions
+- Tags, bookmarks, media management, and protected file streams
+- Global search, related content, and visual page relationships
+- Personal and shared notes
+- Policies and standards with rules, versions, and exceptions
+- Export to Markdown, PDF, and ZIP
 
-### Identitäten und Berechtigungen
+### Identities and permissions
 
-- Lokale Anmeldung mit Access-/Refresh-Token-Rotation
-- Rollen und individuelle Benutzer-Overrides
-- Gruppen, Gruppenmanager und Mitgliedschaftsrollen
-- Knowledge Spaces und vererbbare Ressourcen-ACLs
-- OIDC-/SSO-Provider inklusive Microsoft Entra ID
-- JIT-Provisionierung sowie externe Gruppen- und Rollenzuordnungen
-- Audit-Logs, API-Keys und geschütztes initiales Administratorkonto
+- Local authentication with access and refresh token rotation
+- Roles and individual user overrides
+- Groups, group managers, and membership roles
+- Knowledge Spaces and inheritable resource ACLs
+- OIDC/SSO providers, including Microsoft Entra ID
+- JIT provisioning and external group and role mappings
+- Audit logs, API keys, and a protected initial administrator account
 
-### MCP und Integrationen
+### MCP and integrations
 
-- MCP über Streamable HTTP mit OAuth 2.1 und PKCE
-- Wissenssuche, Lesen, Schreiben und Qualitätswerkzeuge
-- Ressourcen- und Rechteprüfung vor jedem MCP-Datenzugriff
-- Tokenverwaltung, Rate-Limits und strukturierte Audits
-- Microsoft-To-Do-Integration mit Import, Export und Synchronisierung
-- SMTP-Konfiguration und sichere Passwort-Wiederherstellung
+- MCP over Streamable HTTP with OAuth 2.1 and PKCE
+- Knowledge search, read, write, and quality tools
+- Resource and permission checks before every MCP data access
+- Token management, rate limits, and structured audits
+- Microsoft To Do integration with import, export, and synchronization
+- SMTP configuration and secure password recovery
 
-### Betrieb und Datensicherung
+### Operations and backups
 
-- Verschlüsselte Backups mit Zeitplanung und Aufbewahrung
-- Lokale Pfade, Netzwerk-Mounts, SFTP und S3-kompatibler Speicher
-- Prüfsummen, atomare Veröffentlichung und geführte Restore-Vorbereitung
-- Systeminformationen, Readiness-/Liveness-Endpunkte und Prometheus-Metriken
-- Strukturierte JSON-Logs und WebSocket-Benachrichtigungen
-- Versionierte GHCR-Images, SBOM, Provenance und automatisierte CI/CD
+- Encrypted backups with scheduling and retention policies
+- Local paths, network mounts, SFTP, and S3-compatible storage
+- Checksums, atomic publishing, and guided restore preparation
+- System information, readiness and liveness endpoints, and Prometheus metrics
+- Structured JSON logs and WebSocket notifications
+- Versioned GHCR images, SBOM, provenance, and automated CI/CD
 
-## Schnellstart mit Docker Compose
+## Quick start with Docker Compose
 
-Für eine Installation aus einem Release werden weder das Repository noch
-Node.js benötigt. Docker Engine mit Docker Compose muss installiert sein.
+Installing from a release requires neither the repository nor Node.js. Docker
+Engine with Docker Compose must be installed.
 
 ```bash
 mkdir ad-wiki
@@ -78,19 +81,19 @@ cp env.production.example .env
 nano .env
 ```
 
-In `.env` müssen mindestens die öffentliche Domain, das initiale
-Administratorkonto und alle leeren `AD_WIKI_*`-Secrets gesetzt werden.
-Zufallswerte können unter Linux beispielsweise so erzeugt werden:
+At a minimum, set the public domain, the initial administrator account, and
+all empty `AD_WIKI_*` secrets in `.env`. On Linux, you can generate random
+values as follows:
 
 ```bash
-# Allgemeine Secrets
+# General secrets
 openssl rand -base64 48
 
-# Schlüssel, die exakt 32 Byte benötigen
+# Keys that require exactly 32 bytes
 openssl rand -base64 32
 ```
 
-Konfiguration prüfen und Stack starten:
+Validate the configuration and start the stack:
 
 ```bash
 docker compose config --quiet
@@ -98,32 +101,31 @@ docker compose up -d
 docker compose ps
 ```
 
-Docker Compose lädt PostgreSQL, Redis und die fest in `.env` ausgewählte
-AD-Wiki-Version. `database-init` wendet vor dem API-Start automatisch alle
-Prisma-Migrationen an und legt das initiale Administratorkonto idempotent an.
+Docker Compose pulls PostgreSQL, Redis, and the AD-Wiki version pinned in
+`.env`. Before the API starts, `database-init` automatically applies all
+Prisma migrations and idempotently creates the initial administrator account.
 
-> **Hinweis zur Registry:** Solange die GHCR-Pakete privat sind, benötigt der
-> Docker-Host einmalig `docker login ghcr.io` mit einem GitHub-Token und
-> `read:packages`. Öffentliche Pakete können ohne Registry-Login geladen werden.
+> **Registry note:** As long as the GHCR packages are private, the Docker host
+> must run `docker login ghcr.io` once using a GitHub token with
+> `read:packages`. Public packages can be pulled without signing in.
 
-Weitere Informationen:
+Learn more:
 
-- [Produktionsbetrieb mit Docker](docs/production-docker.md)
-- [CI/CD, Releases und Rollback](docs/ci-cd.md)
-- [Backup und Restore](docs/backup-restore.md)
+- [Production deployment with Docker](docs/production-docker.md)
+- [CI/CD, releases, and rollback](docs/ci-cd.md)
+- [Backup and restore](docs/backup-restore.md)
 
-## Update und Rollback
+## Update and rollback
 
-AD-Wiki verwendet bewusst feste Versionstags statt eines unkontrollierten
-`latest`-Deployments. Für ein Update wird in `.env` die gewünschte Version
-gesetzt:
+AD-Wiki deliberately uses fixed version tags instead of uncontrolled `latest`
+deployments. To update, set the desired version in `.env`:
 
 ```env
 AD_WIKI_IMAGE_TAG=v1.0.1
 AD_WIKI_VERSION=1.0.1
 ```
 
-Danach:
+Then run:
 
 ```bash
 docker compose pull
@@ -131,23 +133,22 @@ docker compose up -d --remove-orphans
 docker compose ps
 ```
 
-Vor einem Update sollte ein geprüftes Backup erstellt werden. Ein Rollback
-erfolgt durch Rückkehr zum vorherigen Image-Tag. Bei nicht
-rückwärtskompatiblen Datenbankmigrationen muss zusätzlich der dokumentierte
-Restore-Ablauf berücksichtigt werden.
+Create and verify a backup before updating. To roll back, return to the
+previous image tag. If a database migration is not backward compatible, also
+follow the documented restore procedure.
 
-## Lokale Entwicklung
+## Local development
 
-### Voraussetzungen
+### Prerequisites
 
 - Node.js 24
 - npm 11
-- Docker Desktop beziehungsweise Docker Engine mit Compose
+- Docker Desktop or Docker Engine with Compose
 - Git
 
-Andere Paketmanager wie pnpm oder Yarn werden nicht unterstützt.
+Other package managers, including pnpm and Yarn, are not supported.
 
-### Repository starten
+### Start the repository
 
 ```bash
 git clone https://github.com/alid-it/AD-WIKI.git
@@ -163,123 +164,122 @@ npm run db:migrate
 npm run dev
 ```
 
-Die echten `.env`-Dateien bleiben lokal und dürfen niemals committed werden.
+The real `.env` files remain local and must never be committed.
 
-| Dienst | Adresse |
+| Service | Address |
 | --- | --- |
-| Weboberfläche | `http://localhost:3000` |
+| Web interface | `http://localhost:3000` |
 | REST API | `http://localhost:4000/api/v1` |
 | Swagger | `http://localhost:4000/api/docs` |
 | PostgreSQL | `localhost:5432` |
 | Redis | `localhost:6379` |
 | CloudBeaver | `http://localhost:8978` |
 
-### Wichtige Befehle
+### Important commands
 
 ```bash
-# Web und API im Entwicklungsmodus
+# Run the web app and API in development mode
 npm run dev
 
-# Gesamtes Monorepo bauen
+# Build the complete monorepo
 npm run build
 
-# Automatisierte Sicherheits-, MCP-, Backup- und Fachtests
+# Run automated security, MCP, backup, and domain tests
 npm run test:mcp
 
-# Prisma-Migration für eine Schemaänderung erstellen
-npx prisma migrate dev --name beschreibung
+# Create a Prisma migration for a schema change
+npx prisma migrate dev --name description
 
-# Prisma Studio öffnen
+# Open Prisma Studio
 npm run db:studio
 ```
 
-Datenbankänderungen erfolgen ausschließlich über Prisma-Migrationen.
+All database changes must be made exclusively through Prisma migrations.
 
-## Architektur
+## Architecture
 
 ```text
 AD-WIKI/
 ├── apps/
-│   ├── api/                  NestJS API, Prisma und Worker
+│   ├── api/                  NestJS API, Prisma, and workers
 │   └── web/                  Next.js App Router
 ├── packages/
-│   ├── api-client/           gemeinsamer typisierter API-Client
-│   ├── config/               gemeinsame TypeScript-Konfiguration
-│   └── shared-types/         Zod-Schemas und TypeScript-Typen
-├── docker/                   mehrstufige Produktions-Dockerfiles
-├── deploy/                   quellcodefreie Release-Compose-Dateien
-├── docs/                     Betriebs- und Integrationsdokumentation
-└── .github/workflows/        CI und Container-Release
+│   ├── api-client/           shared typed API client
+│   ├── config/               shared TypeScript configuration
+│   └── shared-types/         Zod schemas and TypeScript types
+├── docker/                   multi-stage production Dockerfiles
+├── deploy/                   source-free release Compose files
+├── docs/                     operations and integration documentation
+└── .github/workflows/        CI and container releases
 ```
 
-| Ebene | Technologie |
+| Layer | Technology |
 | --- | --- |
 | Web | Next.js 16, React 19, Tailwind CSS 4, Tiptap |
-| API | NestJS 11, TypeScript strict, Swagger |
-| Verträge | Zod und `packages/shared-types` als Single Source of Truth |
-| Datenbank | PostgreSQL 18, Prisma 7 mit `@prisma/adapter-pg` |
-| Cache und Jobs | Redis 7 |
-| Echtzeit | Socket.IO |
-| Monorepo | npm Workspaces und Turborepo |
-| Betrieb | Docker Compose, nginx und GitHub Actions |
+| API | NestJS 11, TypeScript strict mode, Swagger |
+| Contracts | Zod and `packages/shared-types` as the single source of truth |
+| Database | PostgreSQL 18, Prisma 7 with `@prisma/adapter-pg` |
+| Cache and jobs | Redis 7 |
+| Real-time | Socket.IO |
+| Monorepo | npm Workspaces and Turborepo |
+| Operations | Docker Compose, nginx, and GitHub Actions |
 
-Das Prisma-Schema umfasst aktuell 54 Modelle. Dazu gehören neben Wiki,
-Benutzern und Sitzungen auch Notes, Standards, Spaces, Ressourcen-ACLs,
-Identity Provider, OAuth, Integrationen, Backups und Audit-Daten.
+The Prisma schema currently contains 54 models. In addition to wiki content,
+users, and sessions, these cover notes, standards, spaces, resource ACLs,
+identity providers, OAuth, integrations, backups, and audit data.
 
-## Sicherheit
+## Security
 
-- Strikte Zod-Validierung für API-Ein- und Ausgaben
-- Keine untypisierten `any`-Verträge zwischen Web und API
-- Gehashte Passwörter, Refresh-Tokens, API-Keys und MCP-Tokens
-- Authentifizierte Verschlüsselung sensibler Integrations- und Backup-Daten
-- Host-/Origin-Allowlisten, Rate-Limits und sichere Proxy-Konfiguration
-- Rechteprüfung für Wiki, Notes, Standards, Spaces und MCP
-- Upload-Prüfung nach tatsächlichem Dateiinhalt
-- Secret-Historienprüfung in CI
+- Strict Zod validation for API inputs and outputs
+- No untyped `any` contracts between the web app and API
+- Hashed passwords, refresh tokens, API keys, and MCP tokens
+- Authenticated encryption for sensitive integration and backup data
+- Host and origin allowlists, rate limits, and secure proxy configuration
+- Permission checks for wiki content, notes, standards, spaces, and MCP
+- Upload validation based on actual file content
+- Secret history scanning in CI
 
-Sicherheitsrelevante Produktionsdetails stehen in:
+Security-related production details are documented in:
 
-- [MCP-Betriebshandbuch](docs/mcp-operations.md)
-- [SSO-Betrieb](docs/sso-betrieb.md)
+- [MCP operations guide](docs/mcp-operations.md)
+- [SSO operations](docs/sso-betrieb.md)
 - [Monitoring](docs/monitoring.md)
-- [Microsoft Entra Setup](docs/entra-setup.md)
+- [Microsoft Entra setup](docs/entra-setup.md)
 
 ## CI/CD
 
-Jeder Push auf `main` und jeder Pull Request durchläuft:
+Every push to `main` and every pull request runs:
 
-1. Scan der Git-Historie auf Secrets
-2. Installation aus `package-lock.json`
-3. Prisma-Validierung und Client-Generierung
-4. alle Migrationen auf einer leeren PostgreSQL-18-Datenbank
-5. Monorepo-Build und automatisierte Tests
-6. Validierung des quellcodefreien Compose-Deployments
-7. Build aller Produktionsimages
+1. A scan of the Git history for secrets
+2. Installation from `package-lock.json`
+3. Prisma validation and client generation
+4. All migrations against an empty PostgreSQL 18 database
+5. The monorepo build and automated tests
+6. Validation of the source-free Compose deployment
+7. Builds of all production images
 
-Ein Tag wie `v1.0.1` startet anschließend den Container-Release. Dabei werden
-versionierte und unveränderliche Images nach GHCR veröffentlicht und ein
-GitHub Release mit `docker-compose.yml` und `env.production.example` erstellt.
+A tag such as `v1.0.1` then starts the container release. The workflow
+publishes versioned, immutable images to GHCR and creates a GitHub release with
+`docker-compose.yml` and `env.production.example`.
 
-## Dokumentation
+## Documentation
 
-| Thema | Dokument |
+| Topic | Document |
 | --- | --- |
-| Docker-Produktion | [docs/production-docker.md](docs/production-docker.md) |
-| Releases und Rollback | [docs/ci-cd.md](docs/ci-cd.md) |
-| Backup und Restore | [docs/backup-restore.md](docs/backup-restore.md) |
-| MCP-Betrieb | [docs/mcp-operations.md](docs/mcp-operations.md) |
-| MCP mit Claude Code | [docs/MCP_Tutorial.md](docs/MCP_Tutorial.md) |
+| Docker production | [docs/production-docker.md](docs/production-docker.md) |
+| Releases and rollback | [docs/ci-cd.md](docs/ci-cd.md) |
+| Backup and restore | [docs/backup-restore.md](docs/backup-restore.md) |
+| MCP operations | [docs/mcp-operations.md](docs/mcp-operations.md) |
+| MCP with Claude Code | [docs/MCP_Tutorial.md](docs/MCP_Tutorial.md) |
 | Microsoft Entra | [docs/entra-setup.md](docs/entra-setup.md) |
-| SSO-Betrieb | [docs/sso-betrieb.md](docs/sso-betrieb.md) |
+| SSO operations | [docs/sso-betrieb.md](docs/sso-betrieb.md) |
 | Monitoring | [docs/monitoring.md](docs/monitoring.md) |
 
-Offene und bereits abgeschlossene technische Punkte werden in
-[Bugs.md](Bugs.md) gepflegt.
+Open and completed technical items are tracked in [Bugs.md](Bugs.md).
 
-## Projektstatus
+## Project status
 
-AD-Wiki `v1.0.0` ist als erster versionierter Container-Release verfügbar.
-Produktive Backup- und Restore-Tests für lokale Mounts, SMB und SFTP wurden
-durchgeführt. Weiterführende Arbeiten und noch offene Betriebsabnahmen sind in
-[Bugs.md](Bugs.md) dokumentiert.
+AD-Wiki `v1.0.0` is available as the first versioned container release.
+Production backup and restore tests have been completed for local mounts, SMB,
+and SFTP. Ongoing work and outstanding operational approvals are documented in
+[Bugs.md](Bugs.md).
